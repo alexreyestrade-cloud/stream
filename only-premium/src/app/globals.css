@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ffffff;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.glass-card {
+  @apply bg-[#131313]/80 backdrop-blur-xl border border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.5)];
+}
+
+.glass-card:hover {
+  @apply bg-[#1a1a1a]/90 border-white/10 shadow-[0_8px_40px_rgba(99,102,241,0.1)];
+}
+
+.glow-text {
+  text-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+}
