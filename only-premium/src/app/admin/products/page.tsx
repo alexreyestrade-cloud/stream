@@ -54,6 +54,19 @@ async function editProduct(formData: FormData) {
   }
 }
 
+async function deleteProduct(formData: FormData) {
+  "use server";
+  await connectDB();
+  const id = formData.get("id")?.toString();
+  if (id) {
+    await Product.findByIdAndDelete(id);
+    await Account.deleteMany({ product: id }); // also delete linked stock
+    revalidatePath("/admin/products");
+    revalidatePath("/");
+    revalidatePath("/admin/accounts");
+  }
+}
+
 async function addAccounts(formData: FormData) {
   "use server";
   await connectDB();
@@ -198,10 +211,17 @@ export default async function ProductsAdminPage() {
                    </button>
                  </form>
 
-                 <div className="flex bg-[#111] border border-white/10 rounded-lg p-3 text-sm items-center justify-between">
+                 <div className="flex bg-[#111] border border-white/10 rounded-lg p-3 text-sm items-center justify-between mb-4">
                    <span className="text-white/60">Stock Disponible:</span>
                    <span className="font-bold text-white">{stock}</span>
                  </div>
+                 
+                 <form action={deleteProduct}>
+                   <input type="hidden" name="id" value={p._id.toString()} />
+                   <button type="submit" className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-md py-1.5 text-xs font-bold transition-all">
+                     Eliminar Producto
+                   </button>
+                 </form>
                </div>
              );
           })}
