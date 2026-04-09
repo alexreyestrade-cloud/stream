@@ -16,10 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <LayoutDashboard size={20} /> Dashboard
           </Link>
           <Link href="/admin/products" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition text-white/70 hover:text-white">
-            <Package size={20} /> Productos
-          </Link>
-          <Link href="/admin/accounts" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition text-white/70 hover:text-white">
-            <KeyRound size={20} /> Cuentas
+            <Package size={20} /> Inventario Total
           </Link>
           <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition text-white/70 hover:text-white">
             <ShoppingCart size={20} /> Órdenes
@@ -32,11 +29,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 max-w-6xl mx-auto">
+      <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <div className="p-4 md:p-8 max-w-6xl mx-auto">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/10 px-6 py-4 pb-8 flex justify-between items-center z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+        <Link href="/admin" className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+          <LayoutDashboard size={24} />
+          <span className="text-[11px] font-medium mt-1">Dashboard</span>
+        </Link>
+        <Link href="/admin/products" className="flex flex-col items-center gap-1 text-fuchsia-400 hover:text-fuchsia-300 transition-colors">
+          <Package size={24} />
+          <span className="text-[11px] font-medium mt-1">Inventario</span>
+        </Link>
+        <Link href="/admin/orders" className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+          <ShoppingCart size={24} />
+          <span className="text-[11px] font-medium mt-1">Órdenes</span>
+        </Link>
+        <Link href="/" className="flex flex-col items-center gap-1 text-white/50 hover:text-red-400 transition-colors">
+          <LogOut size={24} />
+          <span className="text-[11px] font-medium mt-1">Salir</span>
+        </Link>
+      </nav>
     </div>
   );
 }

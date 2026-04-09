@@ -21,6 +21,7 @@ export default function Navbar() {
           {!isAdmin && (
             <Link 
               href="/admin" 
+              prefetch={false}
               className="text-sm font-medium text-white/50 hover:text-white transition-colors"
             >
               Admin Panel

@@ -1,6 +1,7 @@
 import connectDB from "@/lib/mongodb";
 import Category from "@/models/Category";
 import Product from "@/models/Product";
+import Account from "@/models/Account";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,57 @@ async function addProduct(formData: FormData) {
     });
     revalidatePath("/admin/products");
     revalidatePath("/");
+    revalidatePath("/admin/accounts");
+  }
+}
+
+async function editProduct(formData: FormData) {
+  "use server";
+  await connectDB();
+  const id = formData.get("id")?.toString();
+  const price = Number(formData.get("price"));
+  const description = formData.get("description")?.toString();
+  
+  if (id && price > 0 && description) {
+    await Product.findByIdAndUpdate(id, { price, description });
+    revalidatePath("/admin/products");
+    revalidatePath("/");
+  }
+}
+
+async function addAccounts(formData: FormData) {
+  "use server";
+  await connectDB();
+  const productId = formData.get("productId")?.toString();
+  const rawText = formData.get("rawText")?.toString();
+
+  if (productId && rawText) {
+    const lines = rawText.split('\n').map((l: string) => l.trim()).filter((l: string) => l !== "");
+    const accountsToInsert = [];
+
+    for (const line of lines) {
+      let email = line;
+      let password = "";
+      if (line.includes(':')) {
+        [email, password] = line.split(':');
+      } else if (line.includes('|')) {
+        [email, password] = line.split('|');
+      }
+
+      accountsToInsert.push({
+        email: email.trim(),
+        password: password ? password.trim() : "",
+        credentials: line,
+        product: productId,
+        status: "available",
+      });
+    }
+
+    if (accountsToInsert.length > 0) {
+      await Account.insertMany(accountsToInsert);
+      revalidatePath("/admin/products");
+      revalidatePath("/admin");
+    }
   }
 }
 
@@ -42,13 +94,18 @@ export default async function ProductsAdminPage() {
   await connectDB();
   const categories = await Category.find({}).lean();
   const products = await Product.find({}).populate("category").lean();
+  
+  const availableCountsInfo = await Account.aggregate([
+    { $match: { status: "available" } },
+    { $group: { _id: "$product", count: { $sum: 1 } } }
+  ]);
+  const countsMap = availableCountsInfo.reduce((acc: any, curr: any) => ({ ...acc, [curr._id.toString()]: curr.count }), {});
 
   return (
     <div className="space-y-12">
       <h1 className="text-3xl font-bold">Gestión de Productos</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* CATEGORIES FORM */}
         <div className="glass-card p-8 rounded-2xl border border-white/10">
           <h2 className="text-xl font-bold mb-6">Crear Categoría</h2>
           <form action={addCategory} className="space-y-4">
@@ -60,7 +117,7 @@ export default async function ProductsAdminPage() {
               <label className="block text-sm text-white/60 mb-1">Slug (ej. streaming)</label>
               <input required name="slug" className="w-full bg-[#131313] border border-white/10 rounded-lg px-4 py-2" />
             </div>
-            <button type="submit" className="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-500 w-full">
+            <button type="submit" className="bg-slate-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-600 w-full">
               Guardar Categoría
             </button>
           </form>
@@ -75,7 +132,6 @@ export default async function ProductsAdminPage() {
           </div>
         </div>
 
-        {/* PRODUCTS FORM */}
         <div className="glass-card p-8 rounded-2xl border border-white/10">
           <h2 className="text-xl font-bold mb-6">Crear Producto</h2>
           <form action={addProduct} className="space-y-4">
@@ -106,7 +162,7 @@ export default async function ProductsAdminPage() {
                 ))}
               </select>
             </div>
-            <button type="submit" disabled={categories.length === 0} className="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-500 w-full disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={categories.length === 0} className="bg-slate-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-600 w-full disabled:opacity-50 disabled:cursor-not-allowed">
               Guardar Producto
             </button>
           </form>
@@ -115,15 +171,74 @@ export default async function ProductsAdminPage() {
 
       <div className="glass-card p-8 rounded-2xl border border-white/10 mt-12">
         <h2 className="text-xl font-bold mb-6">Productos Disponibles</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {products.map((p: any) => (
-             <div key={p._id.toString()} className="bg-white/5 p-4 rounded-xl">
-               <h3 className="font-bold">{p.name}</h3>
-               <p className="text-sm text-white/50">${p.price} • {p.brand}</p>
-             </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {products.map((p: any) => {
+             const stock = countsMap[p._id.toString()] || 0;
+             return (
+               <div key={p._id.toString()} className="bg-white/5 p-6 rounded-xl border border-white/10 flex flex-col justify-between">
+                 <form action={editProduct} className="flex flex-col gap-3 mb-4">
+                   <input type="hidden" name="id" value={p._id.toString()} />
+                   <div>
+                     <h3 className="font-bold text-lg text-white">{p.name}</h3>
+                     <p className="text-xs text-white/40 mb-2">{p.brand}</p>
+                   </div>
+                   
+                   <div>
+                     <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Precio (MXN)</label>
+                     <input name="price" defaultValue={p.price} type="number" required className="w-full bg-[#111] border border-white/10 rounded-md px-3 py-1.5 text-sm text-slate-300 font-bold focus:border-slate-500 outline-none" />
+                   </div>
+
+                   <div>
+                     <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Descripción breve</label>
+                     <input name="description" defaultValue={p.description} required className="w-full bg-[#111] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white focus:border-slate-500 outline-none" />
+                   </div>
+
+                   <button type="submit" className="mt-2 bg-white/5 hover:bg-slate-500 text-white/70 hover:text-white border border-white/10 rounded-md py-1.5 text-xs font-bold transition-all w-full">
+                     Actualizar
+                   </button>
+                 </form>
+
+                 <div className="flex bg-[#111] border border-white/10 rounded-lg p-3 text-sm items-center justify-between">
+                   <span className="text-white/60">Stock Disponible:</span>
+                   <span className="font-bold text-white">{stock}</span>
+                 </div>
+               </div>
+             );
+          })}
         </div>
       </div>
+
+      <div className="glass-card p-8 rounded-2xl border border-white/10 bg-white/5 mt-12 mb-20">
+        <h2 className="text-2xl font-bold mb-2">Paso 3: Cargar Cuentas (Stock)</h2>
+        <p className="text-white/60 mb-6">Pega aquí los correos y contraseñas que compraste. Cuando un cliente pague, el sistema le entregará automáticamente una de aquí y la descontará.</p>
+        
+        <form action={addAccounts} className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-300 mb-2 font-medium">1. Elige a qué producto vas a subirle stock</label>
+            <select required name="productId" className="w-full bg-[#0a0a0a] border border-white/20 rounded-lg px-4 py-3 text-white">
+              <option value="">Seleccionar Producto...</option>
+              {products.map((p: any) => (
+                <option key={p._id.toString()} value={p._id.toString()}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-slate-300 mb-2 font-medium">2. Pega la lista de correos (Formato: correo:contraseña) 1 por línea</label>
+            <textarea 
+              required 
+              name="rawText" 
+              rows={6}
+              className="w-full bg-[#0a0a0a] border border-white/20 rounded-lg px-4 py-3 text-white font-mono text-sm placeholder:text-white/20"
+              placeholder="netflix1@gmail.com:mipassword123&#10;netflix2@gmail.com:otrapassword456"
+            />
+          </div>
+          <button type="submit" disabled={products.length === 0} className="bg-slate-700 text-white font-bold py-4 px-6 rounded-xl hover:bg-slate-600 w-full transition-all disabled:opacity-50">
+            Añadir Stock al Inventario Automático
+          </button>
+        </form>
+      </div>
+
     </div>
   );
 }

@@ -1,17 +1,18 @@
 import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Account from "@/models/Account";
-import Product from "@/models/Product";
 import { CheckCircle, Copy, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+export const dynamic = "force-dynamic";
 
 export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: { session_id?: string };
+  searchParams: Promise<{ session_id?: string }>;
 }) {
-  const sessionId = searchParams.session_id;
+  const resolvedSearchParams = await searchParams;
+  const sessionId = resolvedSearchParams.session_id;
 
   if (!sessionId) {
     redirect("/");
@@ -25,15 +26,45 @@ export default async function SuccessPage({
     .populate("product")
     .lean();
 
-  if (!order || order.status !== "completed") {
+  if (!order || order.status === "pending") {
     // If it's still pending, webhook might be delayed.
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-6">
-        <div className="w-16 h-16 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mb-6" />
+        <div className="w-16 h-16 rounded-full border-4 border-sky-500 border-t-transparent animate-spin mb-6" />
         <h1 className="text-3xl font-bold mb-4">Procesando tu orden...</h1>
         <p className="text-white/60 mb-8 max-w-lg">
           Estamos confirmando tu pago y asignando tu cuenta. Si acabas de pagar, refresca esta página en unos segundos.
         </p>
+      </div>
+    );
+  }
+
+  if (order.status === "failed") {
+    const whatsappMessage = encodeURIComponent("¡Hola! Acabo de realizar un pago exitoso, pero la plataforma indica que no hay stock automático. A continuación te envío mi captura de pago para la entrega manual de mi cuenta.");
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-6">
+        <AlertCircle className="w-20 h-20 text-yellow-500 mb-6" />
+        <h1 className="text-4xl font-bold mb-2 text-white">Pago Exitoso, Sin Stock Inmediato</h1>
+        <p className="text-lg text-white/60 mb-6 max-w-md">
+          Hemos recibido tu pago correctamente, pero no hay cuentas en la base de datos para entrega automática. No te preocupes, manda mensaje al WhatsApp enviando <strong className="text-amber-400">captura de tu pago</strong> para entregarte tu cuenta manualmente ahora mismo.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 mt-2">
+          <a
+            href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${whatsappMessage}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-black py-4 px-8 rounded-full hover:scale-105 transition-all w-full sm:w-auto shadow-[0_0_20px_rgba(245,158,11,0.4)]"
+          >
+            Enviar Captura por WhatsApp
+          </a>
+
+          <Link
+            href="/"
+            className="flex items-center justify-center font-bold py-4 px-8 rounded-full border border-white/10 hover:bg-white/5 transition-all text-white/80 w-full sm:w-auto"
+          >
+            Volver al Catálogo
+          </Link>
+        </div>
       </div>
     );
   }
