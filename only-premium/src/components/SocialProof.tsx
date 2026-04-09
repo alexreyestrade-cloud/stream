@@ -70,7 +70,7 @@ export default function SocialProof() {
           <Image src="/netflix.png" alt="Netflix" width={120} height={40} className="object-contain h-8 w-auto mix-blend-screen" />
           <Image src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" alt="Spotify" width={100} height={40} className="object-contain h-8 w-auto" />
           <Image src="/canva.png" alt="Canva" width={100} height={40} className="object-contain h-8 w-auto" />
-          <Image src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney" width={120} height={40} className="object-contain h-10 w-auto" />
+          <Image src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney" width={120} height={40} className="object-contain h-10 w-auto brightness-0 invert" />
         </div>
       </div>
     </section>
