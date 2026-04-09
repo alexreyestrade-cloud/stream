@@ -1,77 +1,86 @@
-"use client";
+import connectDB from "@/lib/mongodb";
+import Account from "@/models/Account";
+import Product from "@/models/Product";
+import { revalidatePath } from "next/cache";
 
-import { useState } from "react";
-import { UploadCloud, CheckCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-export default function AccountsAdminPage() {
-  const [productStr, setProductStr] = useState("");
-  const [rawText, setRawText] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+async function deleteAccount(formData: FormData) {
+  "use server";
+  await connectDB();
+  const id = formData.get("id")?.toString();
+  if (id) {
+    await Account.findByIdAndDelete(id);
+    revalidatePath("/admin/accounts");
+    revalidatePath("/admin/products");
+  }
+}
 
-  const handleUpload = async (e: any) => {
-    e.preventDefault();
-    setLoading(true);
-    // Dummy API call Simulation
-    // Normally, call an API that parses `email:password` per line,
-    // and invokes `Account.create()` for each.
-    setTimeout(() => {
-      setResult({ success: true, count: rawText.split("\n").filter(l => l.trim() !== "").length });
-      setRawText("");
-      setLoading(false);
-    }, 1000);
-  };
+export default async function AccountsAdminPage() {
+  await connectDB();
+  // Fetch all accounts and populate product mapping
+  // We can also sort by mostly recent
+  const accounts = await Account.find({}).populate("product").sort({ createdAt: -1 }).lean();
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Administración de Cuentas</h1>
+    <div className="space-y-8">
+      <h1 className="text-3xl font-bold">Gestión de Cuentas Individuales</h1>
+      <p className="text-white/60">Aquí puedes ver y eliminar las cuentas individuales que has subido. Para subir nuevas cuentas masivamente, ve a la sección de Productos.</p>
 
-      <div className="glass-card p-8 rounded-2xl border border-white/10 max-w-2xl">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <UploadCloud className="text-indigo-400" />
-          Subida Masiva
-        </h2>
+      <div className="glass-card p-8 rounded-2xl border border-white/10">
+        <h2 className="text-xl font-bold mb-6">Inventario de Cuentas</h2>
         
-        {result && (
-          <div className="mb-6 p-4 bg-green-500/20 text-green-400 rounded-xl flex items-center gap-3">
-            <CheckCircle size={20} />
-            Se han subido {result.count} cuentas exitosamente.
-          </div>
-        )}
-
-        <form onSubmit={handleUpload} className="space-y-6">
-          <div>
-            <label className="block text-sm text-white/60 mb-2">ID o Nombre del Producto</label>
-            <input 
-              required
-              type="text" 
-              value={productStr}
-              onChange={e => setProductStr(e.target.value)}
-              className="w-full bg-[#131313] border border-white/10 rounded-xl px-4 py-3"
-              placeholder="Ej: Netflix 1 Pantalla"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm text-white/60 mb-2">Lista de Cuentas (formato correo:contraseña)</label>
-            <textarea 
-              required
-              rows={8}
-              value={rawText}
-              onChange={e => setRawText(e.target.value)}
-              className="w-full bg-[#131313] border border-white/10 font-mono text-sm leading-relaxed rounded-xl px-4 py-3 resize-y"
-              placeholder="user1@email.com:pass123&#10;user2@email.com:pass456"
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="bg-white text-black font-bold py-3 px-8 rounded-xl hover:bg-indigo-400 hover:text-white transition w-full md:w-auto"
-          >
-            {loading ? "Procesando..." : "Subir Cuentas"}
-          </button>
-        </form>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/10 text-white/60 text-sm">
+                <th className="py-3 px-4">Producto</th>
+                <th className="py-3 px-4">Correo / Credencial</th>
+                <th className="py-3 px-4">Contraseña</th>
+                <th className="py-3 px-4">Estado</th>
+                <th className="py-3 px-4 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {accounts.map((acc: any) => (
+                <tr key={acc._id.toString()} className="hover:bg-white/5 transition">
+                  <td className="py-3 px-4 text-sm font-medium text-white">
+                    {acc.product?.name || "Producto Desconocido"}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-slate-300">
+                    {acc.email}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-slate-300 font-mono">
+                    {acc.password || "N/A"}
+                  </td>
+                  <td className="py-3 px-4 text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${acc.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {acc.status === 'available' ? 'Disponible' : 'Vendida'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <form action={deleteAccount}>
+                      <input type="hidden" name="id" value={acc._id.toString()} />
+                      <button 
+                        type="submit"
+                        className="text-red-400 hover:text-red-300 text-sm font-medium px-3 py-1 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition"
+                      >
+                        Eliminar
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+              {accounts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-white/40">
+                    No hay cuentas registradas en el inventario.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -21,6 +21,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition text-white/70 hover:text-white">
             <ShoppingCart size={20} /> Órdenes
           </Link>
+          <Link href="/admin/accounts" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition text-white/70 hover:text-white">
+            <KeyRound size={20} /> Cuentas
+          </Link>
         </nav>
 
         <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/10 hover:text-red-400 transition text-white/50 mt-auto">
@@ -48,6 +51,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link href="/admin/orders" className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
           <ShoppingCart size={24} />
           <span className="text-[11px] font-medium mt-1">Órdenes</span>
+        </Link>
+        <Link href="/admin/accounts" className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+          <KeyRound size={24} />
+          <span className="text-[11px] font-medium mt-1">Cuentas</span>
         </Link>
         <Link href="/" className="flex flex-col items-center gap-1 text-white/50 hover:text-red-400 transition-colors">
           <LogOut size={24} />
