@@ -91,7 +91,11 @@ export default function CatalogClient({ categories, products }: { categories: an
                           <img 
                             src={finalLogo} 
                             alt={prod.brand} 
-                            className="max-w-[80%] max-h-[80%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] group-hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.5)] transition-all" 
+                            className={`max-w-[80%] max-h-[80%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] group-hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.5)] transition-all ${
+                              (prod.brand?.toLowerCase().includes("disney") || prod.name?.toLowerCase().includes("disney")) && !finalLogo.includes("FFFFFF") 
+                                ? "brightness-0 invert" 
+                                : ""
+                            }`} 
                           />
                         );
                       }
